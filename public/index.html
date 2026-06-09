@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Growth Copilot</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Lead Scoring Follow-up</p>
+          <h1>AI Growth Copilot</h1>
+        </div>
+        <span class="status" id="status">本地 Demo</span>
+      </header>
+
+      <section class="workspace" aria-label="线索分析工作台">
+        <form class="input-panel" id="lead-form">
+          <div class="panel-heading">
+            <h2>线索上下文</h2>
+            <select id="sample-select" aria-label="选择示例线索">
+              <option value="customer-service">AI 客服试点</option>
+              <option value="growth-copilot">线索运营 Copilot</option>
+              <option value="thin-lead">信息不足线索</option>
+            </select>
+          </div>
+          <label for="lead-text">客户原始表达与销售备注</label>
+          <textarea id="lead-text" name="leadText" rows="18"></textarea>
+          <button id="analyze-button" type="submit">开始分析</button>
+        </form>
+
+        <section class="result-panel" aria-live="polite">
+          <div class="panel-heading">
+            <h2>分析结果</h2>
+          </div>
+          <article id="answer" class="markdown-output empty">
+            输入或选择一条线索后开始分析。
+          </article>
+        </section>
+      </section>
+
+      <section class="trace-panel">
+        <div class="panel-heading">
+          <h2>执行 Trace</h2>
+        </div>
+        <div id="trace" class="trace-list"></div>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
