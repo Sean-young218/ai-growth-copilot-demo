@@ -1,147 +1,247 @@
-# AI Growth Copilot 自主项目
+# AI Growth Copilot
 
-你好，恭喜你通过简历初筛。接下来请完成一个小型自主项目，后续面试会围绕该项目展开。
+AI Growth Copilot 是一个本地可运行的 Web Demo，用于辅助 B2B 营销和销售团队分析潜在客户线索。用户输入或选择一条线索后，系统会加载 `lead-scoring-followup` Skill，查询本地业务资料，并按 ReAct 风格生成线索评分、意向等级、痛点、缺失信息、风险点和跟进建议。
 
-## 项目目标
-
-请实现一个可本地运行的 Web Demo：**AI Growth Copilot：营销线索运营数字员工**。
-
-## 业务背景
-
-现有一家 B2B 企业正在推广一款 AI 产品/服务，营销团队每天会从官网表单、活动报名、社媒私信、邮件咨询等渠道收到潜在客户线索。
-
-现在的问题是：
-
-- 线索质量参差不齐，销售不知道哪些应该优先跟进。
-- 客户留言里常常只有一段自然语言描述，需要人工判断意向、痛点和缺失信息。
-- 不同销售的跟进话术不统一，容易遗漏关键信息。
-- AI 不能随意编造价格、交付周期、客户案例或产品能力，需要基于已有资料生成建议。
-- 团队希望把产品资料、销售 SOP、禁止承诺事项等沉淀为可复用业务资产。
-
-你的任务是做一个小型 Copilot：接收一条潜在客户线索上下文，查询本地 mock 或公开可访问的产品/服务资料，并用 AI 输出线索质量判断、风险点和跟进建议，同时展示关键执行过程。
-
-## 什么是“潜在客户线索”
-
-这里的“潜在客户线索”指的是一条来自潜在客户的咨询记录，通常由营销或销售团队收集。它不是泛泛聊天，而是包含客户需求、业务背景或购买意向的信息。
-
-线索可能来自：
-
-- 官网表单
-- 活动报名
-- 社媒私信
-- 邮件咨询
-- 销售手动记录
-- 客服转交给销售的咨询内容
-
-一条线索可以是结构化字段，也可以是一段非结构化文本。最少应包含：
-
-- 客户原始表达：客户说了什么
-- 感兴趣的产品/服务：客户想了解什么
-
-示例：
+项目重点不在复杂 UI 或真实 CRM 集成，而在跑通一个可审计的最小 Agent 闭环：
 
 ```text
-来源：官网表单
-公司：某制造业企业
-行业：制造业
-感兴趣产品：AI 客服解决方案
-
-客户留言：
-我们想了解你们的 AI 客服方案，主要想降低售后咨询压力，最好能先做一个小范围试点。我们现在有 FAQ 和历史客服记录，希望一个月内看到 Demo。
-
-销售备注：
-客户暂未提供预算，也没有说明当前使用的客服系统。
+线索输入
+  ↓
+加载 lead-scoring-followup Skill
+  ↓
+Reasoning Summary / Route Decision
+  ↓
+Act: 调用 query_product
+  ↓
+Observe: 返回产品资料、销售 SOP、禁止承诺事项
+  ↓
+Answer: LLM 生成结构化分析
+  ↓
+前端展示分析结果和执行 Trace
 ```
 
-你的系统需要基于这类线索判断：这个客户是否值得优先跟进、客户痛点是什么、还缺哪些信息、下一步应该怎么沟通。
+## 功能概览
 
-## 数据来源
+- 在 Web 页面中输入线索上下文，或选择内置示例线索。
+- 使用 `skills/lead-scoring-followup/SKILL.md` 约束分析流程和输出章节。
+- 通过 `query_product` Tool 查询本地 mock 业务资产。
+- 调用 OpenAI-compatible Chat Completions 接口，默认示例配置为 DeepSeek。
+- 在没有配置 API Key 或 LLM 调用失败时，返回本地兜底结果并提示人工复核。
+- 前端展示最终 Markdown 分析结果和本次执行 Trace。
 
-项目中的输入数据和查询数据可以自行 mock，也可以实时从互联网上查询。
-
-你可以选择以下任一方式：
-
-- 使用本地 mock 数据，例如 JSON / Markdown 文件。
-- 在页面中手动输入或粘贴线索上下文。
-- 从互联网实时查询公开资料，例如产品官网、公开文档、搜索结果等。
-- 混合使用：线索使用 mock，产品/服务资料通过互联网查询。
-
-如果使用互联网查询，请注意：
-
-- 只使用公开可访问的信息。
-- 在结果中标明信息来源或查询方式。
-- 不要依赖不稳定或需要登录的站点。
-- 如果查询失败，需要有兜底逻辑，例如使用本地 mock 数据或提示人工确认。
-
-## 最小闭环
+## 目录结构
 
 ```text
-线索上下文输入
-  ↓
-lead-scoring-followup Skill 激活
-  ↓
-Agent Runner 按 ReAct 思路执行：Reasoning Summary → Act(query_product) → Observe → Answer
-  ↓
-LLM 生成清晰分段的分析结果
-  ↓
-前端展示分析结果和执行过程 Trace
+.
+├── data/
+│   ├── product_catalog.json      # 产品/服务 mock 资料
+│   ├── sales_sop.md              # 销售跟进 SOP
+│   └── forbidden_claims.md       # 禁止承诺事项
+├── public/
+│   ├── index.html                # 前端页面
+│   ├── app.js                    # 示例线索、接口调用、结果和 Trace 渲染
+│   └── styles.css                # 页面样式
+├── skills/
+│   └── lead-scoring-followup/
+│       └── SKILL.md              # Agent Skill 定义
+├── src/
+│   ├── server.py                 # 标准库 HTTP 服务和 API 路由
+│   ├── agent/
+│   │   ├── skill_loader.py       # Skill frontmatter/body 加载
+│   │   ├── runner.py             # ReAct 风格 Runner
+│   │   ├── prompt_builder.py     # Prompt 组装
+│   │   └── llm.py                # LLM 调用与兜底输出
+│   └── tools/
+│       └── query_product.py      # 本地业务资料查询工具
+├── tests/                        # 单元测试
+├── RUNNING.md                    # 简短运行说明
+├── solution.md                   # 设计说明
+└── .env.example                  # LLM 配置示例
 ```
 
-## 必做要求
+## 环境要求
 
-- 一个简单 Web 页面，可输入或选择一条线索上下文。
-- 一个 Skill：`lead-scoring-followup`。
-- Skill 需按 Agent Skills specification 组织：`skills/lead-scoring-followup/SKILL.md`
-- Agent Skills specification 参考：https://agentskills.io/specification
-- 一个 Tool：`query_product`，用于查询本地 mock 产品/服务资料，或查询公开互联网资料。
-- 一组 mock 业务资产，例如：`product_catalog.json`、`sales_sop.md`、`forbidden_claims.md`。
-- 调用 LLM，输出清晰分段的分析结果，例如：线索评分、意向等级、客户痛点、缺失信息、风险点、下一步动作、跟进话术、是否需要人工复核。可以使用 JSON，也可以使用 Markdown 分段，不强制要求严格 schema。
-- Agent Runner 应体现基本 ReAct 架构：先根据线索上下文给出简短的 reasoning summary / route decision，决定是否需要调用 Tool；再 Act 调用 `query_product`；Observe 工具返回结果；最后 Answer 生成清晰分段的分析结果。
-- 展示本次执行过程 Trace，至少包括：Skill 名称、Reasoning Summary / Act / Observe / Answer 关键步骤、Prompt / Skill 版本或说明、使用的上下文、Tool 调用记录、输出或错误信息。
-- Trace 中不需要也不应展示完整的模型内部思维链，只需要展示可审计的关键决策摘要和执行步骤。
-- 提供 `solution.md`，简要说明你的设计思路、AI 使用方式、风险控制和后续迭代计划。
-- `solution.md` 应以你本人的思考和表达为主，可以使用 AI 辅助润色，但不应完全由 AI 代写。
-- `solution.md` 需要说明你的关键设计理由：为什么这样定义 Skill，为什么需要 `query_product` 这个 Tool，ReAct 的 reasoning summary / route decision、Act、Observe、Answer 分别如何体现，哪些上下文会传给模型，如何避免 AI 编造价格/周期/案例/能力，以及如果给真实业务使用，你会用哪些指标判断它是否有效。
+- Python 3.9+
+- 无第三方 Python 依赖
+- 可选：DeepSeek 或其他兼容 OpenAI Chat Completions 的 API Key
 
-## 可选扩展
+## 配置 LLM
 
-除必做要求外，你可以自行决定是否增加额外能力，例如批量处理、文件读取、第二个 Tool、人工确认、输出校验、执行历史、简单看板、Docker、MCP 接入等。
+复制 `.env.example` 为 `.env`，并填入 API Key：
 
-这些不是必做项。若你实现了任何扩展，请在 `solution.md` 中说明：
+```bash
+cp .env.example .env
+```
 
-- 为什么选择做这个扩展
-- 它解决了什么问题
-- 它如何服务于业务目标
-- 如果时间有限，你为什么优先做它
+DeepSeek 示例配置：
 
-## 约束
+```env
+OPENAI_API_KEY=your_deepseek_api_key
+OPENAI_BASE_URL=https://api.deepseek.com
+OPENAI_MODEL=deepseek-chat
+```
 
-- 提交周期：24 小时。
-- 允许并鼓励使用 AI / Vibe Coding。
-- 不允许将 Dify、Coze、n8n、Flowise 等低代码/可视化 Agent 平台作为项目主体实现。
-- 核心链路需要用代码实现，包括 Skill 加载、ReAct Runner、Tool 调用和 Trace 展示。
-- 可以参考低代码平台的设计思路，或将其作为非核心辅助工具；如有使用，需要在 `solution.md` 中说明用途和边界。
-- 不需要真实 CRM、真实数据库、用户系统、复杂 UI 或批量处理。
-- 可使用本地 JSON / Markdown mock 数据，也可以实时查询公开互联网资料。
+代码使用 OpenAI-compatible 接口格式，请求路径为：
 
-## 提交内容
+```text
+{OPENAI_BASE_URL}/chat/completions
+```
 
-请提交 Git 仓库或压缩包，至少包含：
+如果不配置 `OPENAI_API_KEY`，系统仍可运行，但会返回本地兜底分析，并在结果中标明需要人工复核。
 
-- 项目源码
-- `README.md`
-- `solution.md`
-- `.env.example`，如需要 API Key
+## 启动项目
 
-## 评审重点
+```bash
+python3 src/server.py
+```
 
-我们主要关注：
+启动后打开：
 
-- 项目是否能本地运行
-- 是否跑通最小业务闭环
-- Skill / Tool / Runner 的边界是否清楚
-- 是否能展示执行过程，而不是只展示最终回答
-- 是否能避免 AI 编造价格、能力、周期、客户案例等内容
-- `solution.md` 是否能说明关键判断和取舍
+```text
+http://127.0.0.1:8000
+```
 
-收到提交后，我们会在 3 个工作日内反馈结果。
+服务默认监听 `127.0.0.1:8000`。
+
+## 运行测试
+
+```bash
+python3 -m unittest discover -s tests
+```
+
+当前测试覆盖了 Runner 基本输出和 `query_product` 的资料匹配逻辑。
+
+## API
+
+### `POST /api/analyze-lead`
+
+请求体：
+
+```json
+{
+  "leadText": "来源：官网表单\n公司：某制造业企业\n行业：制造业\n感兴趣产品：AI 客服解决方案\n客户留言：希望降低售后咨询压力..."
+}
+```
+
+响应体包含：
+
+```json
+{
+  "skill": {
+    "name": "lead-scoring-followup",
+    "version": "0.1.0",
+    "description": "..."
+  },
+  "answer": "Markdown 分析结果",
+  "trace": [
+    { "step": "Skill" },
+    { "step": "Reasoning Summary" },
+    { "step": "Act" },
+    { "step": "Observe" },
+    { "step": "Answer" }
+  ],
+  "context": {
+    "leadText": "...",
+    "interestedProduct": "...",
+    "promptPreview": "..."
+  },
+  "toolObservation": {
+    "toolName": "query_product",
+    "matchedProducts": [],
+    "salesSop": "...",
+    "forbiddenClaims": [],
+    "sources": []
+  }
+}
+```
+
+## Agent 流程
+
+### 1. Skill 加载
+
+`src/agent/skill_loader.py` 读取 `skills/lead-scoring-followup/SKILL.md`，解析 frontmatter 中的 `name`、`description` 和 `metadata.version`，并把正文作为约束注入 Prompt。
+
+### 2. 路由判断
+
+`src/agent/runner.py` 从线索文本中提取感兴趣产品。如果文本未明确产品名称，则使用原始线索做宽泛匹配，并在 Trace 中提示需要补充产品兴趣。
+
+### 3. Tool 调用
+
+Runner 在生成最终答案前调用 `query_product`。该 Tool 会读取：
+
+- `data/product_catalog.json`
+- `data/sales_sop.md`
+- `data/forbidden_claims.md`
+
+匹配策略以产品名、关键词和目标行业为主。如果没有命中，会返回部分产品作为宽泛上下文，并标记 `matchStrategy=broad_context`。
+
+### 4. LLM 生成
+
+`src/agent/prompt_builder.py` 将 Skill、线索上下文和 Tool 观察结果拼成 Prompt。`src/agent/llm.py` 调用兼容 OpenAI 的 Chat Completions 接口，系统提示要求模型只能基于提供资料生成建议。
+
+### 5. Trace 展示
+
+前端会展示关键执行过程，而不是完整模型内部思维链。Trace 包括：
+
+- Skill 名称、版本和路径
+- Reasoning Summary / Route Decision
+- Tool 调用输入
+- Tool 观察摘要
+- Answer 输出预览
+
+## 输出章节
+
+LLM 输出要求包含以下 Markdown 标题：
+
+- 线索评分
+- 意向等级
+- 客户痛点
+- 缺失信息
+- 风险点
+- 下一步动作
+- 跟进话术
+- 是否需要人工复核
+
+## 风险控制
+
+项目通过三层方式减少幻觉和过度承诺：
+
+1. `SKILL.md` 明确禁止编造价格、交付周期、客户案例或产品能力。
+2. `query_product` 返回禁止承诺事项，并把资料来源放入 Trace。
+3. Prompt 要求如果资料没有支持，必须写“需人工确认”。
+
+当客户询问固定价格、固定周期、准确率、ROI、行业案例或合规承诺时，输出应提示人工复核。
+
+## 本地兜底
+
+如果出现以下情况，系统不会中断页面流程，而是返回兜底分析：
+
+- 未配置 `OPENAI_API_KEY`
+- LLM 请求超时
+- LLM 响应格式异常
+- 网络或接口调用失败
+
+兜底结果会明确标注“需人工复核”，避免把静态结果误认为真实模型判断。
+
+## 当前边界
+
+- 业务资料来自本地 mock 文件，没有接入真实 CRM、数据库或搜索引擎。
+- 产品匹配是关键词加权，不是向量检索。
+- Trace 展示的是审计摘要，不展示完整模型内部推理链。
+- 前端 Markdown 渲染只支持当前 demo 需要的基础格式。
+- 服务使用 Python 标准库 HTTP Server，适合本地演示，不作为生产部署方案。
+
+## 常用命令
+
+```bash
+# 启动
+python3 src/server.py
+
+# 测试
+python3 -m unittest discover -s tests
+
+# 直接调用接口
+curl -X POST http://127.0.0.1:8000/api/analyze-lead \
+  -H "Content-Type: application/json" \
+  --data '{"leadText":"来源：官网表单\n公司：某制造业企业\n行业：制造业\n感兴趣产品：AI 客服解决方案\n客户留言：希望降低售后咨询压力，想先做小范围试点。"}'
+```

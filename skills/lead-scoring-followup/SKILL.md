@@ -1,24 +1,24 @@
 ---
 name: lead-scoring-followup
-description: Analyze B2B marketing and sales leads, query product or service assets, score lead quality, identify risks and missing information, and produce follow-up guidance with an auditable ReAct trace.
+description: 用于分析 B2B 营销和销售线索，判断线索质量、识别风险与缺失信息，并生成可审计的跟进建议。
 metadata:
   version: "0.1.0"
 ---
 
-# Lead Scoring Follow-up Skill
+# 线索评分与跟进建议 Skill
 
-Use this skill when a user provides a potential customer lead that needs sales prioritization, pain point analysis, missing-information discovery, risk review, and follow-up suggestions.
+当用户提供一条潜在客户线索，需要判断销售优先级、分析痛点、发现缺失信息、识别风险并生成跟进建议时，使用此 Skill。
 
-## Required Process
+## 必须执行的流程
 
-1. Read the lead context and summarize the route decision in a short reasoning summary.
-2. Call `query_product` before producing the final answer.
-3. Observe matched product assets, sales SOP, forbidden claims, and source names.
-4. Generate the final answer using only the lead context and observed business assets.
+1. 阅读线索上下文，并用简短的 reasoning summary 概括路由判断。
+2. 在生成最终答案前，必须调用 `query_product`。
+3. 观察匹配到的产品资料、销售 SOP、禁止承诺事项和来源名称。
+4. 只能基于线索上下文和工具观察到的业务资料生成最终答案。
 
-## Output Sections
+## 输出章节
 
-Return a clear Markdown answer with these sections:
+返回清晰的 Markdown 结果，并包含以下章节：
 
 - 线索评分
 - 意向等级
@@ -29,9 +29,9 @@ Return a clear Markdown answer with these sections:
 - 跟进话术
 - 是否需要人工复核
 
-## Guardrails
+## 风控约束
 
 - 不得编造价格、交付周期、客户案例或产品能力。
 - 如果资料中没有支持信息，必须标为“需人工确认”。
 - 如果客户要求固定价格、固定周期、准确率、ROI、行业案例或合规承诺，必须提示人工复核。
-- Follow-up suggestions should be specific enough for a salesperson to use, but must not over-promise.
+- 跟进建议应具体到销售可以直接使用，但不得过度承诺。
